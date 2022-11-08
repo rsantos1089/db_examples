@@ -24,6 +24,14 @@
             "mainClass": "com.databases.App",
             "args": "${command:SpecifyProgramArgs}",
             "projectName": "db-dataflow"
+        },
+        {
+            "type": "java",
+            "name": "Launch App",
+            "request": "launch",
+            "mainClass": "com.databases.Apptext",
+            "args": "${command:SpecifyProgramArgs}",
+            "projectName": "db-dataflow"
         }
     ]
 }

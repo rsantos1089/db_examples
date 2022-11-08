@@ -5,6 +5,9 @@ import com.google.cloud.storage.StorageOptions;
 import com.google.cloud.storage.*;
 import com.databases.Helpers.Functions;
 import org.apache.beam.sdk.io.AvroIO;
+
+import java.util.*;
+
 import org.apache.avro.Schema;
 
 public class test {
@@ -55,6 +58,12 @@ public class test {
     Schema schema=new org.apache.avro.Schema.Parser().parse(schemaContent);
     System.out.println("-------------");
     System.out.println(schema);
-   
+    List<String> vowels = new ArrayList<>();
+
+	vowels.add("A"); // [A]
+	vowels.add("E"); // [A, E]
+	vowels.add("U"); // [A, E, U]
+    System.out.println(vowels);
+    System.out.println(vowels.get(1));
 }
 }
