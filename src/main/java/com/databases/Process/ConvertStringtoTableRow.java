@@ -24,10 +24,10 @@ public class ConvertStringtoTableRow extends DoFn<String, TableRow>{
     private static final Logger LOG = LoggerFactory.getLogger(ConvertStringtoTableRow.class);
 
     private final String[] fields;
-    private final String[] types;
-    public ConvertStringtoTableRow(String[] fields,String[] types){
+    
+    public ConvertStringtoTableRow(String[] fields){
         this.fields = fields;
-        this.types = types;
+
     } 
     @ProcessElement
     public void processElement(ProcessContext c) {

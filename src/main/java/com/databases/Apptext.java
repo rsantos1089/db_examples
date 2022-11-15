@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -42,6 +43,7 @@ import org.apache.beam.sdk.values.TupleTag;
 import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.collect.ImmutableList;
 import org.json.JSONObject;
 import org.apache.beam.sdk.values.PCollectionTuple;
+import org.apache.beam.sdk.values.PValueBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.beam.sdk.io.AvroIO;
@@ -73,40 +75,46 @@ public final class Apptext {
 
         String propFileName = "configuration.properties";
         Functions.GetPropertyValues objProperty = new Functions.GetPropertyValues();
-        String projectId = objProperty.getPropValues("gcp_project_id", propFileName);
-        String bigquery_dataset = objProperty.getPropValues("bigquery_dataset", propFileName);
-        String bigquery_table = objProperty.getPropValues("bigquery_table", propFileName);
-        String bucket_url =objProperty.getPropValues("bucket_url", propFileName);
-        String bucket_schema_root_path =objProperty.getPropValues("bucket_schema_root_path", propFileName);
-        String bigquery_schema =objProperty.getPropValues("bigquery_schema", propFileName);
+        
+        //String bucket_url =objProperty.getPropValues("bucket_url", propFileName);
+        //String bucket_schema_root_path =objProperty.getPropValues("bucket_schema_root_path", propFileName);
+        //String bigquery_schema =objProperty.getPropValues("bigquery_schema", propFileName);
         Date date = new Date();
         Timestamp timestamp2 = new Timestamp(date.getTime());
         String appname = "Databases-"+timestamp2;
-        
+        /*
         Storage storage = StorageOptions.newBuilder()
         .setProjectId(projectId)
         .build()
         .getService();
-        LOG.info("storage is :" + storage);
+        LOG.info("storage is :" + storage);*/
 
         ParameterOptions options = PipelineOptionsFactory.fromArgs(args).as(ParameterOptions.class);
+        
+        String projectId = options.getProjectId();
+        String tempLocation = "gs://"+projectId+"/temp/";
+        String stagingLocation = "gs://"+projectId+"/staging/";
+        String bigquery_dataset = options.getBigqueryDataset();
+        String bigquery_table = options.getBigqueryTable();
 
         options.setAppName(appname);
-        options.setProject(objProperty.getPropValues("gcp_project_id", propFileName));
-        options.setTempLocation(objProperty.getPropValues("gcp_temp_location",propFileName));
-        options.setStagingLocation(objProperty.getPropValues("gcp_staging_location",propFileName));
-        options.setRegion(objProperty.getPropValues("gcp_region",propFileName));
-        options.setMaxNumWorkers(Integer.parseInt(objProperty.getPropValues("max_workers",propFileName)));
+        options.setProject(projectId);
+        options.setTempLocation(tempLocation);
+        options.setStagingLocation(stagingLocation);
+        options.setRegion(options.getRegion());
+        options.setMaxNumWorkers(Integer.parseInt(options.getWorkers()));
 
         Pipeline p = Pipeline.create(options);
 
         String fields_txt = objProperty.getPropValues("fields_txt",propFileName);
-        String types_txt = objProperty.getPropValues("types_txt",propFileName);  
+        //String types_txt = objProperty.getPropValues("types_txt",propFileName);  
         String[] fieldsArrTxt = fields_txt.split(",");
-        String[] typeArrTxt = types_txt.split(",");
+        //String[] typeArrTxt = types_txt.split(",");
         String[] List_index = objProperty.getPropValues("indexs",propFileName).split(","); 
+        List<TableFieldSchema> List_fields = new ArrayList<>(); 
         List<Integer> List_index_int = new ArrayList<>();
 
+        /*
         LinkedHashMap<Integer, String> fieldsDictTxt = new LinkedHashMap<Integer, String>();
         LinkedHashMap<Integer, String> typesDictTxt = new LinkedHashMap<Integer, String>();
         
@@ -121,16 +129,22 @@ public final class Apptext {
                     fieldsDictTxt.put(k, input);
                     ++k;
         }
+        */
+        
+        for (String input : fieldsArrTxt){
+            TableFieldSchema field = new TableFieldSchema().setName(input).setType("STRING").setMode("NULLABLE");
+            List_fields.add(field);
+        }
 
         for (String input : List_index){
             List_index_int.add(Integer.parseInt(input));
         }
 
-        Blob blob = storage.get(bucket_url, bucket_schema_root_path +  bigquery_schema +".json");
-        String bqSchema = new String(blob.getContent());
+        //Blob blob = storage.get(bucket_url, bucket_schema_root_path +  bigquery_schema +".json");
+        //String bqSchema = new String(blob.getContent());
         //System.out.println(bqSchema);
 
-        PCollection<String> readTxt = p.apply("Read from bucket txt", TextIO.read().from("gs://neat-drummer-366611/bigquery_schema/data.txt"));
+        PCollection<String> readTxt = p.apply("Read from bucket txt", TextIO.read().from(options.getPathFile()));
         
         PCollection<String> Txtvalue=readTxt.apply("Split by index",ParDo.of(new DoFn<String, String>() {
             @ProcessElement
@@ -149,22 +163,11 @@ public final class Apptext {
             }
                 }));
 
-            TableSchema tableSchema = new TableSchema().setFields(ImmutableList.of(
-                new TableFieldSchema().setName("name")
-                                      .setType("STRING")
-                                      .setMode("NULLABLE"),
-                new TableFieldSchema().setName("age")
-                                      .setType("INTEGER")
-                                      .setMode("NULLABLE"),
-                new TableFieldSchema().setName("country")
-                                      .setType("STRING")
-                                      .setMode("NULLABLE")
-            )
-            );
-
+            TableSchema tableSchema = new TableSchema().setFields(List_fields);
+            
             LOG.info("schema tablerow:"+tableSchema);
 
-             Txtvalue.apply(ParDo.of( new ConvertStringtoTableRow(fieldsArrTxt,typeArrTxt)))
+             Txtvalue.apply(ParDo.of( new ConvertStringtoTableRow(fieldsArrTxt)))
             .apply("write to bigquery",BigQueryIO.writeTableRows()
             .to(String.format("%s:%s.%s", projectId, bigquery_dataset, bigquery_table))
             .withSchema(tableSchema)

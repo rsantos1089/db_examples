@@ -9,15 +9,49 @@ import org.apache.beam.sdk.options.ValueProvider;
 
 public interface ParameterOptions extends DataflowPipelineOptions {
 
-    @Description("GCS temp bucket for BQ Loads")
+    @Description("Project id")
+    @Required
+    String getProjectId();
+    void setProjectId(String value);
+
+    @Description("Region to process dataflow")
+    @Required
+    String getRegion();
+    void setRegion(String value);
+
+    @Description("Fields names of file")
+    @Required
+    ValueProvider<String> getFieldsNamesFile();
+    void setFieldsNamesFile(String value);
+
+    @Description("Positions index of file")
+    @Required
+    String getPositionsIndexFile();
+    void setPositionsIndexFile(String value);
+   
+    @Description("Path of file")
+    @Required
+    ValueProvider<String> getPathFile();
+    void setPathFile(ValueProvider<String> value);
+
+    @Description("Bigquery dataset target")
+    @Required
+    String getBigqueryDataset();
+    void setBigqueryDataset(String value);
+
+    @Description("Bigquery table target")
+    @Required
+    String getBigqueryTable();
+    void setBigqueryTable(String value);
+
+    @Description("Path of temp Bigquery process")
     @Required
     ValueProvider<String> getTempGCSBQBucket();
     void setTempGCSBQBucket(ValueProvider<String> value);
 
-    @Description("GCS temp bucket for Dataflow Processing")
+    @Description("Total num workers in dataflow")
     @Required
-    String getTempGCSDataflowBucket();
-    void setTempGCSDataflowBucket(String value);
-    
+    String getWorkers();
+    void setWorkers(String value);
 
 }
